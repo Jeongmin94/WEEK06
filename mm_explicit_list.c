@@ -1,4 +1,7 @@
 
+//(영후) 안녕하세요 ^_^
+
+
 /*
  * mm-naive.c - The fastest, least memory-efficient malloc package.
  *
@@ -37,8 +40,8 @@ team_t team = {
 };
 
 #define ALIGNMENT 8
-#define ALIGN(size) (((size) + (ALIGNMENT-1)) & ~0x7)
-#define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
+#define ALIGN(size) (((size) + (ALIGNMENT-1)) & ~0x7)			// (영후) 이 매크로는 사용되지 않았네요!    										<---------
+#define SIZE_T_SIZE (ALIGN(sizeof(size_t)))						// (영후) 이 매크로는 implicit 이든 explicit이든 사용할 일이 없었더라구요.			 <---------
 
 // MACROS
 #define WSIZE 4
@@ -77,13 +80,13 @@ static void del_free(void* bp);
  */
 int mm_init(void)
 {
-	heap_listp = mem_sbrk(4 * DSIZE);
-	if (heap_listp == (void*)-1) return -1;
+	heap_listp = mem_sbrk(4 * DSIZE);							// (영후) 매크로에 MINIMUM = 24 는 따로 설정 해주지 않으셨지만
+	if (heap_listp == (void*)-1) return -1;						//		초기 init 블록이 32byte 크기를 갖고있는 것으로 보아 해당 방식으로 진행하려고 하신 듯 하군요!
 
 	PUT(heap_listp, 0);										// padding
 	PUT(heap_listp + WSIZE, PACK(3* DSIZE, 1));				// header
 	PUT(heap_listp + 2 * WSIZE, 0);							// prev
-	PUT(heap_listp + 3 * WSIZE, 0);							// next
+	PUT(heap_listp + 3 * WSIZE, 0);							// next					
 	PUT(heap_listp + 6 * WSIZE, PACK(3 * DSIZE, 1));		// footer
 	PUT(heap_listp + 7 * WSIZE, PACK(0, 1));				// epilogue
 
@@ -114,8 +117,8 @@ void* mm_malloc(size_t size)
 	}
 
 	extendsize = MAX(asize, CHUNKSIZE);
-    bp = extend_heap(extendsize/WSIZE);
-	if (bp == NULL) return NULL;
+    bp = extend_heap(extendsize/WSIZE);	
+	if (bp == NULL) return NULL;									// (영후) 보통 extend_heap 가드를 bp 초기화(윗줄)와 함께 한 줄로 진행하던데, 나눠 놓으시니 이것도 보기가 좋네요
 	place(bp, asize);
 	return bp;
 }
@@ -134,8 +137,8 @@ void mm_free(void* bp)
 /*
  * mm_realloc - Implemented simply in terms of mm_malloc and mm_free
  */
-void* mm_realloc(void* bp, size_t size)
-{
+void* mm_realloc(void* bp, size_t size)									// (영후) realloc을 직접 구현하셨네요!
+{																		
 	if (size == 0) {
 		mm_free(bp);
 		return NULL;
@@ -143,16 +146,16 @@ void* mm_realloc(void* bp, size_t size)
 	size_t cur_size = GET_SIZE(HDRP(bp))-2*WSIZE;
 	void* new_bp;
 	size_t copy_len;           
+																		// (영후) 잠시 메모 좀 하겠습니다.
+	if(size < cur_size)	copy_len = size;								// (영후) 현 블록의 사이즈가 재할당하려는 사이즈보다 큰 경우 copy_len = 재할당 사이즈
+	else copy_len = cur_size;											// (영후) 현 블록의 사이즈가 재할당하려는 사이즈보다 작은 경우 copy_len = 현 블록의 사이즈
 
-	if(size < cur_size)	copy_len = size;
-	else copy_len = cur_size;
+	new_bp = mm_malloc(size);											// (영후) 일단 재할당 size만큼 말록을 진행하기
+	memcpy(new_bp, bp, copy_len);										// (영후) 말록된 곳에 현 블록 컨텐츠를 copy_len 만큼 진행하기
+	mm_free(bp);														// (영후) 현 블록 free
 
-	new_bp = mm_malloc(size);
-	memcpy(new_bp, bp, copy_len);
-	mm_free(bp);
-
-	return new_bp;
-}
+	return new_bp;														// (영후) 기본 realloc 과 크게 다른 점은 없어보이는데 기본 realloc은 호환이 안 되는게 신기하네요! 
+}																		//		제가 놓친게 있다면 알려주시면 감사하겠습니다! (혹시 위에 size==0 인 경우의 코드 때문일까요?) 
 
 // 힙 확장
 static void *extend_heap(size_t words)
@@ -179,7 +182,7 @@ static void* coalesce(void* bp) {
 	// 다음 블록 병합
 	if (prev_alloc && !next_alloc) {
 		size += GET_SIZE(HDRP(NEXT_BLK(bp)));
-		del_free(NEXT_BLK(bp));
+		del_free(NEXT_BLK(bp));										// (영후) del_free 함수를 따로 만드셔서 코드가 말끔하네요! 저는 그냥 함수를 따로 안 만들고 다 써보려했다가 터져버렸어요 ^_^
 		PUT(HDRP(bp), PACK(size, 0));
 		PUT(FTRP(bp), PACK(size, 0));
 	}
@@ -218,7 +221,7 @@ static void del_free(void* bp) {
     // bp = NEXT_PTR(bp);
 }
 
-static void* find_fit(size_t asize) {
+static void* find_fit(size_t asize) {								// (영후)  next_fit으로 돌아가는 모습도 보고싶어요!!!!
 	void* bp;
 	for (bp = free_list; GET_ALLOC(HDRP(bp)) == 0; bp = NEXT_PTR(bp)) {
 		if (GET_SIZE(HDRP(bp)) >= asize) {
@@ -229,7 +232,7 @@ static void* find_fit(size_t asize) {
 }
 
 // find test
-static void* find_fit2(size_t asize) {
+static void* find_fit2(size_t asize) {					
 	void* bp;
     int cnt =0;
     void* high = mem_heap_hi();
@@ -262,3 +265,6 @@ static void place(void* bp, size_t asize) {
 		PUT(FTRP(bp), PACK(size, 1));
 	}
 }
+
+
+// (영후) 전반적으로 코드가 말끔해 보여서 보기 좋았습니다. explicit 으로 84점!! 수고 많으셨습니다 ^_^
